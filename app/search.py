@@ -1,8 +1,10 @@
-from sqlalchemy import select, func, or_, and_, not_
+from sqlalchemy import select, and_, not_
 from sqlalchemy.ext.asyncio import AsyncSession
 import models
 from embeddings import generate_embedding
 import numpy as np
+import json
+import ast
 
 
 # Фильтрует рецепты по наличию или отсутствию ингредиентов.
@@ -19,14 +21,14 @@ async def filter_recipes_by_ingredients(
     if ingredient_filter.include:
         for ingredient in ingredient_filter.include:
             conditions.append(
-                func.array_to_string(models.Recipe.ingredients, ', ').ilike(f'%{ingredient}%')
+                models.Recipe.ingredients.ilike(f'%{ingredient}%')
             )
 
     # Условие ИСКЛЮЧЕНИЯ: каждый ингредиент из списка "include" должен быть в рецепте
     if ingredient_filter.exclude:
         for ingredient in ingredient_filter.exclude:
             conditions.append(
-                not_(func.array_to_string(models.Recipe.ingredients, ', ').ilike(f'%{ingredient}%'))
+                not_(models.Recipe.ingredients.ilike(f'%{ingredient}%'))
             )
 
     if conditions:
@@ -35,13 +37,20 @@ async def filter_recipes_by_ingredients(
     query = query.offset(skip).limit(limit)
 
     result = await db.execute(query)
-    return result.scalars().all()
+    recipes = result.scalars().all()
+
+    for recipe in recipes:
+        recipe.ingredients = json.loads(recipe.ingredients)
+        recipe.tags = json.loads(recipe.tags)
+        recipe.embedding = json.loads(recipe.embedding) if recipe.embedding else None
+
+    return recipes
 
 
 async def semantic_search_recipes(
         db: AsyncSession,
         natural_language_query: str,
-        threshold: float = 0.5,
+        threshold: float = 0.3,
         skip: int = 0,
         limit: int = 100
 ):
@@ -56,10 +65,10 @@ async def semantic_search_recipes(
     recipes_with_similarity = []
     for recipe in all_recipes:
         if recipe.embedding:
-            recipe_embedding = np.array(recipe.embedding)
+            recipe_embedding = np.array(ast.literal_eval(recipe.embedding), dtype=float)
             similarity = np.dot(query_embedding, recipe_embedding) / (np.linalg.norm(query_embedding) * np.linalg.norm(recipe_embedding))
             if similarity >= threshold:
-                recipes_with_similarity.append(recipe, similarity)
+                recipes_with_similarity.append((recipe, similarity))
 
     recipes_with_similarity.sort(key=lambda x: x[1], reverse=True)
 

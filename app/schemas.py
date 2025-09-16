@@ -1,7 +1,6 @@
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field
 from typing import List, Optional
 from enum import Enum
-from datetime import datetime
 
 
 class DifficultyLevel(str, Enum):
@@ -12,12 +11,12 @@ class DifficultyLevel(str, Enum):
 
 class RecipeBase(BaseModel):
     title: str = Field(min_length=1, max_length=255, examples=["Спагетти Итальяно"])
-    ingredients: List[str] = Field(..., examples=["спагетти 100гр", ",бекон 50г", "яйцо 1шт", "пармезан 30гр"])
+    ingredients: List[str] = Field(examples=[["спагетти 100гр", ",бекон 50г", "яйцо 1шт", "пармезан 30гр"]])
     instructions: str = Field(examples=["Сварите спагетти ..."])
-    cooking_time_minutes: int = Field(gt=0, examples=[15])
+    cooking_time: int = Field(..., gt=0, examples=[15])
     difficulty: DifficultyLevel = Field(examples=[DifficultyLevel.medium])
-    cuisine: str = Field(min_length=1, max_length=100, examples=["итальянская"])
-    tags: Optional[List[str]] = Field(default=[], examples=["итальянская", "паста", "быстро"])
+    cuisine: str = Field(..., min_length=1, max_length=100, examples=["итальянская"])
+    tags: Optional[List[str]] = Field(default=[], examples=[["итальянская", "паста", "быстро"]])
     author: Optional[str] = Field(default="Анонимный автор рецепта", max_length=100)
 
 
@@ -33,13 +32,13 @@ class RecipeUpdate(RecipeBase):
     difficulty: Optional[DifficultyLevel] = None
     cuisine: Optional[str] = Field(None, min_length=1, max_length=100)
     tags: Optional[List[str]] = None
-    author: Optional[str] = Field(None, max_digits=100)
+    author: Optional[str] = Field(None, max_length=100)
 
 
 class Recipe(RecipeBase):
     id: int
-    created_at: datetime
-    updated_at: datetime
+    created_at: Optional[str] = None
+    updated_at: Optional[str] = None
 
     class Config:
         from_attributes = True

@@ -1,14 +1,17 @@
 from fastapi import FastAPI, Depends, HTTPException, status, Query
-
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
-
+from starlette.middleware.cors import CORSMiddleware
 import models
 import schemas
 import crud
 import search
 from database import engine, get_db
-# from embeddings import generate_embedding
+
+
+async def create_tables():
+    async with engine.begin() as conn:
+        await conn.run_sync(models.Base.metadata.create_all)
 
 
 # Описание API
@@ -51,6 +54,23 @@ app = FastAPI(
         },
     ]
 )
+
+
+# Настройка CORS (разрешить запросы с фронтенда)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:3000"],  # URL вашего фронтенд-приложения
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# Event handler: создает таблицы при запуске приложения
+@app.on_event("startup")
+async def on_startup():
+    await create_tables()
+    print("Таблицы в БД созданы (если не существовали)")
 
 
 # Эндпоинт для создания нового рецепта
