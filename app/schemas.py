@@ -11,7 +11,7 @@ class DifficultyLevel(str, Enum):
 
 class RecipeBase(BaseModel):
     title: str = Field(min_length=1, max_length=255, examples=["Спагетти Итальяно"])
-    ingredients: List[str] = Field(examples=[["спагетти 100гр", ",бекон 50г", "яйцо 1шт", "пармезан 30гр"]])
+    ingredients: List[str] = Field(examples=[["спагетти 100гр", "бекон 50г", "яйцо 1шт", "пармезан 30гр"]])
     instructions: str = Field(examples=["Сварите спагетти ..."])
     cooking_time: int = Field(..., gt=0, examples=[15])
     difficulty: DifficultyLevel = Field(examples=[DifficultyLevel.medium])
